@@ -1,4 +1,4 @@
-# spunk-spark-streaming-source
+# spark-streaming-splunk-receiver
 Spark streaming source to use for exporting data from a Splunk index
 
 Create splunk search query and pass it to the exported.
