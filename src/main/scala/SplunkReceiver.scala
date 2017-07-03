@@ -9,7 +9,7 @@ class SplunkReceiver(host: String,
                      port: Int,
                      username: String,
                      password: String,
-                     searchQuery:String,
+                     searchQuery: String,
                      startTime: DateTime,
                      queryWindowSeconds: Int)
   extends Receiver[String](StorageLevel.MEMORY_AND_DISK_2) {
