@@ -2,10 +2,7 @@ import com.splunk._
 
 object SplunkExport {
   def main(args: Array[String]) {
-    //TODO: connect to splunk and run export query.
-    //TODO: print exported data to console
-
-
+    
     val loginArgs: ServiceArgs = new ServiceArgs
     loginArgs.setUsername("export")
     loginArgs.setPassword("export")
@@ -14,9 +11,6 @@ object SplunkExport {
     loginArgs.setSSLSecurityProtocol(SSLSecurityProtocol.TLSv1_2)
 
     val service = Service.connect(loginArgs)
-
-    val searchQuery = "index=\"nytaxi\" | search * | fields vendor_name, Trip_Pickup_DateTime | head 100"
-
 
     // Export search
     // Create an argument map for the export arguments// Create an argument map for the export arguments
