@@ -6,8 +6,13 @@ scalaVersion := "2.11.8"
 
 resolvers += "splunk-artifactory" at "http://splunk.jfrog.io/splunk/ext-releases-local"
 
+val sparkVersion = "2.1.1"
+
 libraryDependencies ++= Seq(
-  "com.splunk" % "splunk" % "1.6.3.0"
+  "com.splunk" % "splunk" % "1.6.3.0",
+  "joda-time" % "joda-time" % "2.9.9",
+  "org.apache.spark" %% "spark-core" % sparkVersion % "provided",
+  "org.apache.spark" %% "spark-streaming" % sparkVersion % "provided"
 )
 
 

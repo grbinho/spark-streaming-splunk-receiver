@@ -4,7 +4,7 @@
 		module="spark-streaming-splunk-receiver_2.11"
 		revision="1.0"
 		status="integration"
-		publication="20170703200212"
+		publication="20170703213241"
 	>
 		<description>
 		spark-streaming-splunk-receiver
@@ -35,5 +35,8 @@
 		<dependency org="org.scala-lang" name="scala-compiler" rev="2.11.8" conf="scala-tool->default,optional(default)"/>
 		<dependency org="org.scala-lang" name="scala-library" rev="2.11.8" conf="scala-tool->default,optional(default);compile->default(compile)"/>
 		<dependency org="com.splunk" name="splunk" rev="1.6.3.0" conf="compile->default(compile)"/>
+		<dependency org="joda-time" name="joda-time" rev="2.9.9" conf="compile->default(compile)"/>
+		<dependency org="org.apache.spark" name="spark-core_2.11" rev="2.1.1" conf="provided->default(compile)"/>
+		<dependency org="org.apache.spark" name="spark-streaming_2.11" rev="2.1.1" conf="provided->default(compile)"/>
 	</dependencies>
 </ivy-module>

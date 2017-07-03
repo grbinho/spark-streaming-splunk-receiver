@@ -7,14 +7,26 @@
 		revision="1.0"
 		conf="test"
 		confs="compile, runtime, test, provided, optional, compile-internal, runtime-internal, test-internal, plugin, sources, docs, pom, scala-tool"
-		date="20170703200212"/>
+		date="20170703213241"/>
 	<dependencies>
+		<module organisation="joda-time" name="joda-time">
+			<revision name="2.9.9" status="release" pubdate="20170323143313" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://www.joda.org/joda-time/" downloaded="false" searched="false" default="false" conf="default, compile, runtime, default(compile), master" position="2">
+				<license name="Apache 2" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="no" details="" size="6647" time="0" location="/Users/igrbavac/.ivy2/cache/joda-time/joda-time/ivy-2.9.9.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/joda-time/joda-time/2.9.9/joda-time-2.9.9.pom"/>
+				<caller organisation="default" name="spark-streaming-splunk-receiver_2.11" conf="test, compile, runtime" rev="2.9.9" rev-constraint-default="2.9.9" rev-constraint-dynamic="2.9.9" callerrev="1.0"/>
+				<artifacts>
+					<artifact name="joda-time" type="jar" ext="jar" status="no" details="" size="634048" time="0" location="/Users/igrbavac/.ivy2/cache/joda-time/joda-time/jars/joda-time-2.9.9.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/joda-time/joda-time/2.9.9/joda-time-2.9.9.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
 		<module organisation="com.splunk" name="splunk">
-			<revision name="1.6.3.0" status="release" pubdate="20170510234026" resolver="splunk-artifactory" artresolver="splunk-artifactory" homepage="" downloaded="true" searched="true" default="false" conf="default, compile, runtime, default(compile), master" position="1">
-				<metadata-artifact status="successful" details="" size="391" time="485" location="/Users/igrbavac/.ivy2/cache/com.splunk/splunk/ivy-1.6.3.0.xml" searched="true" original-local-location="/Users/igrbavac/.ivy2/cache/com.splunk/splunk/ivy-1.6.3.0.xml.original" origin-is-local="false" origin-location="http://splunk.jfrog.io/splunk/ext-releases-local/com/splunk/splunk/1.6.3.0/splunk-1.6.3.0.pom"/>
+			<revision name="1.6.3.0" status="release" pubdate="20170510234026" resolver="sbt-chain" artresolver="sbt-chain" homepage="" downloaded="false" searched="false" default="false" conf="default, compile, runtime, default(compile), master" position="1">
+				<metadata-artifact status="no" details="" size="2311" time="0" location="/Users/igrbavac/.ivy2/cache/com.splunk/splunk/ivy-1.6.3.0.xml" searched="false" origin-is-local="false" origin-location="http://splunk.jfrog.io/splunk/ext-releases-local/com/splunk/splunk/1.6.3.0/splunk-1.6.3.0.pom"/>
 				<caller organisation="default" name="spark-streaming-splunk-receiver_2.11" conf="test, compile, runtime" rev="1.6.3.0" rev-constraint-default="1.6.3.0" rev-constraint-dynamic="1.6.3.0" callerrev="1.0"/>
 				<artifacts>
-					<artifact name="splunk" type="jar" ext="jar" status="successful" details="" size="562259" time="1095" location="/Users/igrbavac/.ivy2/cache/com.splunk/splunk/jars/splunk-1.6.3.0.jar">
+					<artifact name="splunk" type="jar" ext="jar" status="no" details="" size="562259" time="0" location="/Users/igrbavac/.ivy2/cache/com.splunk/splunk/jars/splunk-1.6.3.0.jar">
 						<origin-location is-local="false" location="http://splunk.jfrog.io/splunk/ext-releases-local/com/splunk/splunk/1.6.3.0/splunk-1.6.3.0.jar"/>
 					</artifact>
 				</artifacts>

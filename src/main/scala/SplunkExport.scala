@@ -1,8 +1,10 @@
+package io.grba.spark
+
 import com.splunk._
 
 object SplunkExport {
   def main(args: Array[String]) {
-    
+
     val loginArgs: ServiceArgs = new ServiceArgs
     loginArgs.setUsername("export")
     loginArgs.setPassword("export")
@@ -16,6 +18,7 @@ object SplunkExport {
     // Create an argument map for the export arguments// Create an argument map for the export arguments
 
     val exportArgs = new JobExportArgs
+    //TODO: Sliding window (with retries??). Depending on spark streaming settings
     //exportArgs.setEarliestTime("-1h")
     //exportArgs.setLatestTime("now")
     exportArgs.setSearchMode(JobExportArgs.SearchMode.NORMAL)
@@ -41,6 +44,8 @@ object SplunkExport {
         }
       }
     }
+
+
 
     multiResultsReader.close()
   }
