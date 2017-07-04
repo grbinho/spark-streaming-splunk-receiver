@@ -12,7 +12,7 @@ class SplunkReceiver(host: String,
                      searchQuery: String,
                      startTime: DateTime,
                      queryWindowSeconds: Int)
-  extends Receiver[String](StorageLevel.MEMORY_AND_DISK_2) {
+  extends Receiver[Event](StorageLevel.MEMORY_AND_DISK_2) {
 
   def onStart(): Unit = {
     new Thread("Splunk Receiver") {
@@ -25,9 +25,8 @@ class SplunkReceiver(host: String,
   }
 
   /* Accepted splunk date time format
-   * %m/%d/%Y:%H:%M:%S
    */
-  private def toSplunkStringFormat(value: DateTime) = value.formatted("MM/dd/yyyy:HH:mm:ss")
+  private def toSplunkStringFormat(value: DateTime) = value.toString("yyyy-MM-dd'T'HH:mm:ss")
 
   private def receive(): Unit = {
 
@@ -63,14 +62,19 @@ class SplunkReceiver(host: String,
         var counter = 0 // count the number of events
 
         for (searchResults <- multiResultsReader) {
-          for (event <- searchResults) {
-            System.out.println("***** Event " + { counter += 1; counter - 1 } + " *****")
+          for (event: Event <- searchResults) {
             // Writing event by event (Unreliable streaming)
-            store(event.toString) //TODO: Check what would be the best way to get the event out? string or actual object
+            store(event)
           }
         }
 
         multiResultsReader.close()
+
+        println("Wait a bit")
+
+        Thread.sleep(10000)
+
+        println("Done waiting")
 
         //Move query window
         queryStartTime = queryEndTime
