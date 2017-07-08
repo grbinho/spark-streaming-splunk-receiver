@@ -1,8 +1,9 @@
-package io.grba.spark.streaming.receiver
+package org.apache.spark.streaming.receiver
 
 import com.splunk._
+import org.apache.spark.internal.Logging
 import org.apache.spark.storage.StorageLevel
-import org.apache.spark.streaming.receiver.Receiver
+import org.apache.spark.streaming.receiver.progress.{ProgressStore, TimeProgressRecord}
 import org.joda.time.DateTime
 
 class SplunkReceiver(host: String,
@@ -10,9 +11,12 @@ class SplunkReceiver(host: String,
                      username: String,
                      password: String,
                      searchQuery: String,
-                     startTime: DateTime,
-                     queryWindowSeconds: Int)
-  extends Receiver[Event](StorageLevel.MEMORY_AND_DISK_2) {
+                     queryWindowSeconds: Int,
+                     progressTracker: ProgressStore,
+                     startTime: DateTime)
+  extends Receiver[Event](StorageLevel.MEMORY_AND_DISK_2) with Logging {
+
+  val SPLUNK_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss"
 
   def onStart(): Unit = {
     new Thread("Splunk Receiver") {
@@ -26,11 +30,13 @@ class SplunkReceiver(host: String,
 
   /* Accepted splunk date time format
    */
-  private def toSplunkStringFormat(value: DateTime) = value.toString("yyyy-MM-dd'T'HH:mm:ss")
+  private def toSplunkStringFormat(value: DateTime) = value.toString(SPLUNK_TIME_FORMAT)
 
   private def receive(): Unit = {
 
-    //TODO: In case of a restart, we should read start time from somewhere...
+    progressTracker.open()
+    progressTracker.writeProgress(new TimeProgressRecord(startTime))
+
     var queryStartTime = startTime
     var queryEndTime = queryStartTime.plusSeconds(queryWindowSeconds)
 
@@ -59,8 +65,6 @@ class SplunkReceiver(host: String,
         val exportSearch = service.export(searchQuery, exportArgs)
         // Display results using the SDK's multi-results reader for XML
         val multiResultsReader = new MultiResultsReaderXml(exportSearch)
-        var counter = 0 // count the number of events
-
         for (searchResults <- multiResultsReader) {
           for (event: Event <- searchResults) {
             // Writing event by event (Unreliable streaming)
@@ -68,21 +72,19 @@ class SplunkReceiver(host: String,
           }
         }
 
-        multiResultsReader.close()
+        val progressRecord = new TimeProgressRecord(queryEndTime)
+        progressTracker.writeProgress(progressRecord)
 
-        println("Wait a bit")
+        //TODO: Correlate with now. We should not go to the future.
 
-        Thread.sleep(10000)
-
-        println("Done waiting")
-
-        //Move query window
         queryStartTime = queryEndTime
         queryEndTime = queryStartTime.plusSeconds(queryWindowSeconds)
+
+        multiResultsReader.close()
+
+        Thread.sleep(1000)
       }
 
-      //TODO: Close other resources and retry
-      //TODO: Store time window state?
       restart("Trying to connect again")
     } catch {
       case e: Throwable => restart("Error receiving data from Splunk", e)
