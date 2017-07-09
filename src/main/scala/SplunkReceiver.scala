@@ -5,6 +5,7 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.streaming.receiver.progress.{ProgressStore, TimeProgressRecord}
 import org.joda.time.DateTime
+import org.joda.time.format.DateTimeFormat
 
 class SplunkReceiver(host: String,
                      port: Int,
@@ -34,11 +35,19 @@ class SplunkReceiver(host: String,
 
   private def receive(): Unit = {
 
-    progressTracker.open()
-    progressTracker.writeProgress(new TimeProgressRecord(startTime))
+    var queryStartTime: DateTime = startTime
+    var queryEndTime: DateTime = startTime
 
-    var queryStartTime = startTime
-    var queryEndTime = queryStartTime.plusSeconds(queryWindowSeconds)
+    progressTracker.open()
+
+    // Take the later value
+    val progressValue = progressTracker.read()
+    if(!progressValue.isEmpty) {
+      val progressValueTime = DateTime.parse(progressValue, DateTimeFormat.forPattern(SPLUNK_TIME_FORMAT))
+      if(progressValueTime.isAfter(startTime)) queryStartTime = progressValueTime
+    }
+
+    queryEndTime = queryStartTime.plusSeconds(queryWindowSeconds)
 
     import scala.collection.JavaConversions._
 
@@ -76,11 +85,14 @@ class SplunkReceiver(host: String,
         progressTracker.writeProgress(progressRecord)
 
         //TODO: Correlate with now. We should not go to the future.
+        //Untill now bigger time span, and when we catch up, queryEndTime should be now
 
         queryStartTime = queryEndTime
         queryEndTime = queryStartTime.plusSeconds(queryWindowSeconds)
 
         multiResultsReader.close()
+
+        //TODO: Decide how much to sleep depending on how many records are coming in.
 
         Thread.sleep(1000)
       }

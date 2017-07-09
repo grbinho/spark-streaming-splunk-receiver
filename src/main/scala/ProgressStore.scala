@@ -35,8 +35,6 @@ class DfsProgressStore(directory: String, name: String) extends ProgressStore wi
   var progressFileSystem: FileSystem = _
   var progressBackupFileSystem: FileSystem = _
 
-
-
   override def open(): Unit = {
     //Check and setup file paths
     if (progressFileSystem == null) {
