@@ -18,8 +18,8 @@ object SplunkSparkStreaming {
     val progressStore = new DfsProgressStore("/tmp/spark_streaming_progress", "splunk_nytaxi")
 
     val rides = ssc.receiverStream(new SplunkReceiver("localhost", 8089, "export", "export",
-      "search index=nytaxi | fields vendor_name, Trip_Pickup_DateTime, _time | fields - _raw, _bkt, _cd, _serial, _subsecond, _si, _sourcetype, _indextime",
-      60, progressStore, new DateTime(2011, 8, 10, 11, 59)))
+      "search index=nytaxi | fields vendor_name, Trip_Pickup_DateTime, _time | fields - _raw, _bkt, _cd, _serial, _subsecond, _si, _sourcetype, _indextime | sort +_time",
+      progressStore, new DateTime(2011, 8, 10, 11, 59)))
 
     val mappedRides = rides.map(e => {
       var acc = ""
