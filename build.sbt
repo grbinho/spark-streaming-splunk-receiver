@@ -12,6 +12,7 @@ libraryDependencies ++= Seq(
   "com.splunk" % "splunk" % "1.6.3.0",
   "joda-time" % "joda-time" % "2.9.9",
   "org.apache.spark" %% "spark-core" % sparkVersion % "provided",
+  "org.apache.spark" %% "spark-sql" % sparkVersion % "provided",
   "org.apache.spark" %% "spark-streaming" % sparkVersion % "provided"
 )
 

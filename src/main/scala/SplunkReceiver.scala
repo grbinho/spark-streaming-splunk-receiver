@@ -7,12 +7,18 @@ import org.apache.spark.streaming.receiver.progress.{ProgressStore, TimeProgress
 import org.joda.time.{DateTime, Seconds}
 import org.joda.time.format.DateTimeFormat
 
+import scala.collection.mutable.ArrayBuffer
+import scala.collection.JavaConversions._
+
 class SplunkReceiver(host: String,
                      port: Int,
                      username: String,
                      password: String,
                      searchQuery: String,
                      progressTracker: ProgressStore,
+                     // User can decide that he/she will commit progress only when additional processing was completed,
+                     // so actual progress can be written downstream.
+                     saveProgress: Boolean,
                      startTime: DateTime)
   extends Receiver[Event](StorageLevel.MEMORY_AND_DISK_2) with Logging {
 
@@ -31,9 +37,10 @@ class SplunkReceiver(host: String,
   /** Accepted splunk date time format
    */
   private def toSplunkStringFormat(value: DateTime) = value.toString(SPLUNK_TIME_FORMAT)
+  private def fromSplunkStringFormat(value: String) = DateTime.parse(value, DateTimeFormat.forPattern(SPLUNK_TIME_FORMAT))
 
   private def getQueryWindow(differenceInSecondsFromNow: Int, requestDurationSeconds: Long, previousQueryWindowSeconds: Int) : Int = {
-    val newQueryWindow: Int = differenceInSecondsFromNow match {
+    var newQueryWindow: Int = differenceInSecondsFromNow match {
       case diff if diff > 3600 => 3600
       case diff if diff > 1800 => 900
       case diff if diff > 900 => 600
@@ -41,11 +48,7 @@ class SplunkReceiver(host: String,
       case _ => differenceInSecondsFromNow
     }
 
-
-    if(requestDurationSeconds > previousQueryWindowSeconds) {
-      //We are not catching up
-      //Somehow we need to adapt
-    }
+    newQueryWindow = Math.max(1,2 * previousQueryWindowSeconds - requestDurationSeconds.toInt)
 
     newQueryWindow
   }
@@ -56,7 +59,7 @@ class SplunkReceiver(host: String,
 
     var queryWindowSeconds = 10
 
-    var queryStartTime: DateTime = startTime
+    var queryStartTime: DateTime = startTime //TODO: Timezone??
     var queryEndTime: DateTime = startTime
 
     progressTracker.open()
@@ -64,15 +67,13 @@ class SplunkReceiver(host: String,
     // Take the later value
     val progressValue = progressTracker.read()
     if(!progressValue.isEmpty) {
-      val progressValueTime = DateTime.parse(progressValue, DateTimeFormat.forPattern(SPLUNK_TIME_FORMAT))
+      val progressValueTime = fromSplunkStringFormat(progressValue)
       if(progressValueTime.isAfter(startTime)) queryStartTime = progressValueTime
     }
 
     queryEndTime = queryStartTime.plusSeconds(queryWindowSeconds)
 
     logInfo(s"Initial period start: $queryStartTime, end: $queryEndTime")
-
-    import scala.collection.JavaConversions._
 
     try {
       val loginArgs: ServiceArgs = new ServiceArgs
@@ -88,58 +89,55 @@ class SplunkReceiver(host: String,
       while(!isStopped)
       {
         val exportArgs = new JobExportArgs
-        //TODO: Sliding window (with retries??). Depending on spark streaming settings
         exportArgs.setEarliestTime(toSplunkStringFormat(queryStartTime)) //Inclusive
         exportArgs.setLatestTime(toSplunkStringFormat(queryEndTime)) //Exclusive
         exportArgs.setSearchMode(JobExportArgs.SearchMode.NORMAL)
+        exportArgs.setOutputMode(JobExportArgs.OutputMode.JSON)
+        exportArgs.setOutputTimeFormat("%Y-%m-%d %H:%M:%S.%3N %:z")
 
         // Run the search with a search query and export arguments
         val exportSearch = service.export(searchQuery, exportArgs)
         // Display results using the SDK's multi-results reader for XML
-        val multiResultsReader = new MultiResultsReaderXml(exportSearch)
-        var eventCount = 0
+        val multiResultsReader = new MultiResultsReaderJson(exportSearch)
 
         val receiveStartTime = System.nanoTime()
-        for (searchResults <- multiResultsReader) {
-          for (event: Event <- searchResults) {
-            // Writing event by event (Unreliable streaming)
-            eventCount += 1
-            store(event)
-          }
 
-          //TODO: Checkpoint here?
-        }
+        val events = ArrayBuffer[Event]()
+        multiResultsReader.foreach(searchResult =>
+          searchResult.foreach(event =>
+            events += event))
+
+        store(events)
+
         val receiveEndTime = System.nanoTime()
 
         multiResultsReader.close()
 
         val requestDuration = (receiveEndTime - receiveStartTime) / 1000000000 //nano seconds -> seconds
-        logInfo(s"Splunk request duration: $requestDuration s")
+        logInfo(s"Splunk REQUEST DURATION: $requestDuration s")
 
-        val progressRecord = new TimeProgressRecord(queryEndTime)
-        progressTracker.writeProgress(progressRecord)
+        if(saveProgress) {
+          val progressRecord = new TimeProgressRecord(queryEndTime)
+          progressTracker.writeProgress(progressRecord)
+        }
 
 
+        logInfo(s"CURRENT TIME WINDOW: $queryWindowSeconds s")
         val differenceFromNow = Seconds.secondsBetween(queryEndTime, DateTime.now).getSeconds
-
-        //bigger the difference, bigger the queryWindow can be. That way we can bring more data in. Less overhead for multiple queries.
-
-        //TODO: If this window is too large, we could have data duplication
-        //Checkpoint in the receive loop? (read max timestamp from event)
         queryWindowSeconds = getQueryWindow(differenceFromNow, requestDuration, queryWindowSeconds)
+        logInfo(s"NEW TIME WINDOW: $queryWindowSeconds s")
         queryStartTime = queryEndTime
         queryEndTime = queryStartTime.plusSeconds(queryWindowSeconds)
         if(queryEndTime.isAfter(DateTime.now)) queryEndTime = DateTime.now
 
-
         //DO NOT QUERY IF THERE IS NOTHING TO QUERY
         //TODO: Get some back pressure information from spark??
-        if(eventCount == 0) {
+        if(events.length == 0 && differenceFromNow < 10) {
+          logInfo(s"No events, sleeping for one second.")
           Thread.sleep(1000)
         }
 
         logInfo(s"Next period start: $queryStartTime, end: $queryEndTime")
-
       }
 
       restart("Trying to connect again")
